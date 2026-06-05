@@ -117,11 +117,11 @@ export default function EmailView({ emails, candidates, jobs, onSendEmail, onDel
     <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       
       {/* Navigation tabs row */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex items-center overflow-x-auto whitespace-nowrap border-b border-slate-200 pb-0.5 gap-1 scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('composer')}
-          className={`pb-4 px-6 text-sm font-bold border-b-2 transition flex items-center space-x-2 ${
+          className={`shrink-0 pb-4 px-6 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'composer' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
           }`}
         >
@@ -131,7 +131,7 @@ export default function EmailView({ emails, candidates, jobs, onSendEmail, onDel
         <button
           type="button"
           onClick={() => setActiveTab('history')}
-          className={`pb-4 px-6 text-sm font-bold border-b-2 transition flex items-center space-x-2 ${
+          className={`shrink-0 pb-4 px-6 text-xs sm:text-sm font-bold border-b-2 transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'history' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
           }`}
         >

@@ -22,6 +22,17 @@ import { db, auth, logInWithGoogle, logOutUser, handleFirestoreError, OperationT
 
 // Types imports
 import { User, Job, Candidate, Application, Interview, Email } from './types';
+import { 
+  LayoutDashboard, 
+  Briefcase, 
+  Users, 
+  Calendar, 
+  Mail, 
+  Cpu, 
+  FileText, 
+  Settings, 
+  ShieldAlert 
+} from 'lucide-react';
 
 // Components imports
 import Sidebar from './components/Sidebar';
@@ -41,6 +52,18 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  const mobileMenuItems = [
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
+    { id: 'jobs', name: 'Tin tuyển dụng', icon: Briefcase },
+    { id: 'candidates', name: 'Hồ sơ', icon: Users },
+    { id: 'interviews', name: 'Lịch phỏng vấn', icon: Calendar },
+    { id: 'emails', name: 'Hệ thống Email', icon: Mail },
+    { id: 'automation', name: 'Workflow', icon: Cpu },
+    { id: 'reports', name: 'Báo cáo', icon: FileText },
+    { id: 'settings', name: 'Cài đặt', icon: Settings },
+    { id: 'admin', name: 'Admin', icon: ShieldAlert },
+  ];
 
   // Firestore collections states
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -533,6 +556,32 @@ export default function App() {
           onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
+        {/* Horizontal navbar for Mobile and Tablet (lg:hidden) */}
+        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-2.5 flex items-center space-x-3 overflow-x-auto whitespace-nowrap scrollbar-none shrink-0 z-10 shadow-xs">
+          {mobileMenuItems.map((item) => {
+            const isActive = currentTab === item.id;
+            const IconComponent = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setCurrentTab(item.id);
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={`flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold transition tracking-tight shrink-0 cursor-pointer bg-transparent border-0 outline-none ${
+                  isActive 
+                    ? 'text-indigo-600 font-extrabold scale-102' 
+                    : 'text-slate-550 hover:text-slate-800'
+                }`}
+              >
+                <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span>{item.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Render Tab views seamlessly */}
         <main className="flex-1 overflow-y-auto bg-slate-50 relative">
           
@@ -561,6 +610,7 @@ export default function App() {
               onUpdateCandidate={handleUpdateCandidate} 
               onDeleteCandidate={handleDeleteCandidate}
               onUpdateApplicationStatus={handleUpdateApplicationStatus}
+              onAddCandidate={handleAddCandidate}
             />
           )}
 

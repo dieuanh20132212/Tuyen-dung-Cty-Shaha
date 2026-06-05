@@ -457,11 +457,11 @@ export default function AutomationView({ notifications, jobs = [], onAddCandidat
     <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       
       {/* Tab Selectors */}
-      <div className="flex items-center space-x-1 bg-slate-200/60 p-1.5 rounded-2xl w-fit border border-slate-200">
+      <div className="flex items-center space-x-1 bg-slate-200/60 p-1.5 rounded-2xl max-w-full overflow-x-auto whitespace-nowrap scrollbar-none border border-slate-200">
         <button
           type="button"
           onClick={() => setActiveTab('architecture')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'architecture' 
               ? 'bg-white text-indigo-650 shadow-sm font-black' 
               : 'text-slate-550 hover:text-slate-800'
@@ -473,19 +473,19 @@ export default function AutomationView({ notifications, jobs = [], onAddCandidat
         <button
           type="button"
           onClick={() => setActiveTab('radar')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'radar' 
               ? 'bg-white text-indigo-650 shadow-sm' 
               : 'text-slate-550 hover:text-slate-800'
           }`}
         >
-          <Radio className={`w-4 h-4 ${activeTab === 'radar' ? 'text-indigo-500 animate-pulse' : ''}`} />
+          <Radio className={`w-4 h-4 ${activeTab === 'radar' ? 'text-indigo-505 animate-pulse' : ''}`} />
           AI Social Sourcing Radar (Quét MXH)
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('rules')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'rules' 
               ? 'bg-white text-indigo-650 shadow-sm' 
               : 'text-slate-550 hover:text-slate-800'

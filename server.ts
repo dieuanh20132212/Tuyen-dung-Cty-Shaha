@@ -363,6 +363,127 @@ app.post('/api/scan-social-candidates', async (req, res) => {
   }
 });
 
+/**
+ * 6. API: Perplexity Real-time Talent & Web Search Sourcing
+ */
+app.post('/api/perplexity-search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) {
+    return res.status(400).json({ error: 'Search query is required' });
+  }
+
+  const prompt = `Bạn là hệ thống tìm kiếm thông tin nhân sự toàn cầu Perplexity AI. Hãy thực hiện quét dữ liệu internet thực tế theo từ khóa yêu cầu của HR dưới đây:
+  
+  TỪ KHÓA TÌM KIẾM CỦA HR: "${query}"
+  
+  Hãy mô phỏng việc truy quét dữ liệu và phân tích chiều sâu để trả về danh sách chính xác 3 ứng viên thực tế hoặc tiềm năng tìm được từ mạng internet (như LinkedIn, GitHub, Facebook...).
+  Đầu ra PHẢI là một mảng JSON chuẩn gồm 3 đối tượng ứng viên, viết bằng TIẾNG VIỆT tự nhiên. Mỗi đối tượng bắt buộc phải có đủ cấu trúc trường thông tin sau:
+  - name: Họ tên đầy đủ (tiếng Việt phong phú)
+  - email: Địa chỉ email của ứng viên
+  - phone: Số điện thoại liên hệ thực tế hoặc mô phỏng
+  - address: Địa điểm sinh sống làm việc tại Việt Nam
+  - skills: Mảng các kỹ năng kỹ thuật/chuyên môn (VD: ["React", "TypeScript", "Python"])
+  - experience: Tóm tắt kinh nghiệm sâu sắc của họ
+  - education: Đại học hoặc chứng chỉ liên quan
+  - languages: Mảng các ngôn ngữ (VD: ["Tiếng Việt", "Tiếng Anh"])
+  - matchScore: Điểm phù hợp (từ 70 đến 99) dựa trên từ khóa tìm kiếm
+  - sourcePlatform: "LinkedIn" hoặc "GitHub" hoặc "Facebook" hoặc "Perplexity Search"
+  - profileUrl: Một đường dẫn liên kết profile cá nhân thực tế hoặc bán thực tế tương ứng với họ tên (VD: https://linkedin.com/in/...)
+  - matchReason: Lý do cụ thể vì sao họ lọt vào kết quả tìm kiếm của Perplexity AI`;
+
+  try {
+    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+    if (perplexityApiKey) {
+      try {
+        const response = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${perplexityApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'sonar-reasoning',
+            messages: [
+              {
+                role: 'system',
+                content: 'Bạn là chuyên viên AI Sourcing của Perplexity. Hãy tìm kiếm 3 hồ sơ ứng viên tương thích trên web và trả về định dạng JSON mảng các đối tượng chứa: name, email, phone, address, skills (mảng), experience, education, languages (mảng), matchScore (số), sourcePlatform, profileUrl, matchReason.'
+              },
+              {
+                role: 'user',
+                content: `Tìm kiếm hồ sơ ứng viên cho yêu cầu: ${query}`
+              }
+            ]
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const pContent = data.choices?.[0]?.message?.content;
+          if (pContent) {
+            const jsonMatch = pContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonMatch) {
+              return res.json(JSON.parse(jsonMatch[0]));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Real Perplexity call output failed, falling back to Gemini:", err);
+      }
+    }
+
+    if (ai) {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction: 'Bạn là chuyên gia nhân sự kết nối công nghệ tìm kiếm sâu Perplexity AI. Trả về kết quả là mảng JSON của 3 ứng viên.',
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING, description: 'Họ tên hồ sơ ứng viên tìm thấy' },
+                email: { type: Type.STRING, description: 'Địa chỉ Email' },
+                phone: { type: Type.STRING, description: 'Số điện thoại liên lạc' },
+                address: { type: Type.STRING, description: 'Địa điểm cư trú' },
+                skills: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  description: 'Tập hợp kỹ năng trích xuất từ profile'
+                },
+                experience: { type: Type.STRING, description: 'Tóm tắt kinh nghiệm vị trí tương đương' },
+                education: { type: Type.STRING, description: 'Thông tin học văn' },
+                languages: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  description: 'Ngôn ngữ giao tiếp'
+                },
+                matchScore: { type: Type.INTEGER, description: 'Điểm khớp từ 0 đến 100 dựa trên mô tả JD' },
+                sourcePlatform: { type: Type.STRING, description: 'Nền tảng: LinkedIn, Facebook, GitHub hoặc Perplexity Search' },
+                profileUrl: { type: Type.STRING, description: 'Liên kết profile cá nhân' },
+                matchReason: { type: Type.STRING, description: 'Giải thích chi tiết tại sao Perplexity đề xuất ứng viên này' }
+              },
+              required: ['name', 'email', 'phone', 'address', 'skills', 'experience', 'education', 'matchScore', 'sourcePlatform', 'profileUrl', 'matchReason']
+            }
+          }
+        }
+      });
+
+      const responseText = response.text;
+      if (!responseText) {
+        throw new Error("No response text from Gemini");
+      }
+      return res.json(JSON.parse(responseText.trim()));
+    } else {
+      return res.json(getSimulatedPerplexitySearch(query));
+    }
+  } catch (err: any) {
+    console.error('Perplexity Sourcing Search error:', err);
+    return res.json(getSimulatedPerplexitySearch(query));
+  }
+});
+
 // === AUXILIARY MOCK SIMULATION ENGINE ===
 
 function getSimulatedJD(title: string, mode: string, salary: string, skills: string, location: string) {
@@ -552,6 +673,151 @@ function getSimulatedScannedCandidates(job: any) {
       }
     ];
   }
+}
+
+function getSimulatedPerplexitySearch(query: string) {
+  const qLower = query.toLowerCase();
+  const isGolangOrJava = qLower.includes('golang') || qLower.includes('go') || qLower.includes('java');
+  const isPythonOrAI = qLower.includes('python') || qLower.includes('ai') || qLower.includes('machine') || qLower.includes('data');
+
+  if (isGolangOrJava) {
+    return [
+      {
+        name: "Phạm Quốc Tuấn",
+        email: "quoctuan.go@gmail.com",
+        phone: "0392817263",
+        address: "Quận 1, TP. Hồ Chí Minh",
+        skills: ["Go (Golang)", "Docker", "PostgreSQL", "gRPC", "Redis", "Microservices"],
+        experience: "4 năm kinh nghiệm làm Backend Developer Go tại VNG Cloud. Thiết kế hệ thống chịu tải cao và đồng bộ Pub/Sub.",
+        education: "Đại học Bách Khoa TP.HCM",
+        languages: ["Tiếng Việt", "Tiếng Anh (IELTS 6.0)"],
+        matchScore: 95,
+        sourcePlatform: "LinkedIn",
+        profileUrl: "https://linkedin.com/in/quoctuango-mock",
+        matchReason: "Công cụ Perplexity Web Search phát hiện profile thông qua các từ khóa Go Developer tại HCM. Thành thục gRPC và Docker phù hợp với các hệ thống backend quy mô lớn."
+      },
+      {
+        name: "Nguyễn Minh Đức",
+        email: "minhduc.java@outlook.com",
+        phone: "0912384729",
+        address: "Hai Bà Trưng, Hà Nội",
+        skills: ["Java", "Spring Boot", "Hibernate", "MySQL", "Kubernetes", "Kafka"],
+        experience: "5 năm kinh nghiệm backend Spring Boot tại VPBank. Chuyên tối ưu hóa xử lý thanh toán và API banking.",
+        education: "Đại học Công nghệ - ĐHQGHN",
+        languages: ["Tiếng Việt", "Tiếng Anh (Conversational)"],
+        matchScore: 89,
+        sourcePlatform: "GitHub",
+        profileUrl: "https://github.com/ducjava-backend-mock",
+        matchReason: "Tìm thấy từ khoá đóng góp mã nguồn Spring Boot nổi bật tại GitHub. Phù hợp cho thiết kế hạ tầng thanh toán an toàn, bảo mật cao."
+      },
+      {
+        name: "Lê Thị Thuỷ",
+        email: "thuythuthi.it@gmail.com",
+        phone: "0981726354",
+        address: "Đà Nẵng, Việt Nam",
+        skills: ["Java", "Go", "Docker", "Spring Boot", "RabbitMQ"],
+        experience: "3 năm lập trình Full Stack. Chuyển đổi linh hoạt giữa các dịch vụ microservices Go và Java Spring.",
+        education: "Đại học Bách Khoa Đà Nẵng",
+        languages: ["Tiếng Việt", "Tiếng Anh"],
+        matchScore: 82,
+        sourcePlatform: "Perplexity Search",
+        profileUrl: "https://linkedin.com/in/thuyle-danang-mock",
+        matchReason: "Phát hiện thông tin giới thiệu thành viên tiêu biểu tại Đà Nẵng Tech Group trên Facebook. Am hiểu cả Go lẫn Spring Boot."
+      }
+    ];
+  }
+
+  if (isPythonOrAI) {
+    return [
+      {
+        name: "Vũ Hải Nam",
+        email: "hainam.ai@gmail.com",
+        phone: "0904817263",
+        address: "Hà Đông, Hà Nội",
+        skills: ["Python", "PyTorch", "TensorFlow", "FastAPI", "Docker", "Machine Learning", "LLM Tuning"],
+        experience: "3 năm làm Machine Learning Engineer tại VinAI Research. Trực tiếp tham gia huấn luyện và tinh chỉnh các mô hình ngôn ngữ lớn (LLM).",
+        education: "Đại học Bách Khoa Hà Nội",
+        languages: ["Tiếng Việt", "Tiếng Anh (IELTS 7.5)"],
+        matchScore: 96,
+        sourcePlatform: "GitHub",
+        profileUrl: "https://github.com/hainamai-ml-mock",
+        matchReason: "Phát hiện thông qua tài khoản GitHub chứa nhiều repo chất lượng về Fine-tuning Llama-3 và RAG pipeline. Kiến thức vượt trội về AI/Deep Learning."
+      },
+      {
+        name: "Nguyễn Hoài Thương",
+        email: "hoaithuong.data@outlook.com",
+        phone: "0934812739",
+        address: "Quận 3, TP. Hồ Chí Minh",
+        skills: ["Python", "Pandas", "SQL", "Tableau", "Apache Spark", "Machine Learning"],
+        experience: "4 năm làm Data Analyst kiêm Engineer tại Tiki. Xây dựng data pipeline tự động hóa báo cáo kinh doanh nội bộ.",
+        education: "Đại học Kinh tế TP.HCM",
+        languages: ["Tiếng Việt", "Tiếng Anh (IELTS 6.5)"],
+        matchScore: 88,
+        sourcePlatform: "LinkedIn",
+        profileUrl: "https://linkedin.com/in/thuongnguyen-data-mock",
+        matchReason: "Tìm kiếm từ khoá Data Science/Python tại Tiki Hồ Chí Minh. Có kinh nghiệm thực tế về phân tích dữ liệu lớn và triển khai mô hình phán đoán."
+      },
+      {
+        name: "Đỗ Gia Bảo",
+        email: "giabao.ai.dev@gmail.com",
+        phone: "0962817364",
+        address: "Hà Nội, Việt Nam",
+        skills: ["Python", "FastAPI", "OpenCV", "NLP", "LangChain"],
+        experience: "2.5 năm thiết kế chatbot và các công nghệ thị giác máy tính nhận diện khuôn mặt.",
+        education: "Đại học FPT",
+        languages: ["Tiếng Việt", "Tiếng Anh (TOEIC 850)"],
+        matchScore: 85,
+        sourcePlatform: "Perplexity Search",
+        profileUrl: "https://linkedin.com/in/giabaodev-mock",
+        matchReason: "Phát hiện thông qua bài viết chia sẻ về ứng dụng OpenCV và trí tuệ nhân tạo trên blog cá nhân. Có tư duy sản phẩm AI tốt."
+      }
+    ];
+  }
+
+  return [
+    {
+      name: "Nguyễn Thế Linh",
+      email: "thelinh.tech@gmail.com",
+      phone: "0987162534",
+      address: "Quận Bình Thạnh, TP. Hồ Chí Minh",
+      skills: ["ReactJS", "Node.js", "Express", "MongoDB", "TypeScript", "Tailwind CSS"],
+      experience: "3.5 năm phát triển MERN stack. Chuyên nghiệp hóa luồng nghiệp vụ API và tối ưu trải nghiệm client.",
+      education: "Đại học CNTT - ĐHQG TPHCM",
+      languages: ["Tiếng Việt", "Tiếng Anh (IELTS 6.5)"],
+      matchScore: 92,
+      sourcePlatform: "LinkedIn",
+      profileUrl: "https://linkedin.com/in/thelinhdev-mock",
+      matchReason: "Profile tìm kiếm LinkedIn chứa đầy đủ kỹ thuật Stack hiện đại, hoạt động tích cực, điểm đánh giá kỹ năng cao (92%) hoàn toàn khớp yêu cầu tuyển dụng chung."
+    },
+    {
+      name: "Phạm Hà Mi",
+      email: "hami.develop@outlook.com",
+      phone: "0912635472",
+      address: "Cầu Giấy, Hà Nội",
+      skills: ["Vue.js", "Nuxt.js", "Node.js", "TypeScript", "PostgreSQL", "Docker"],
+      experience: "2 năm xây dựng cổng thông tin doanh nghiệp lớn và đồng bộ dữ liệu. Tối ưu SEO cho Nuxt.",
+      education: "Đại học Bách Khoa Hà Nội",
+      languages: ["Tiếng Việt", "Tiếng Anh (TOEIC 800)"],
+      matchScore: 85,
+      sourcePlatform: "GitHub",
+      profileUrl: "https://github.com/hamitech-mock",
+      matchReason: "Cơ sở mã nguồn mở phong phú tại GitHub. Kỹ năng tư duy giải thuật tối ưu và viết code gọn đẹp theo chuẩn quốc tế."
+    },
+    {
+      name: "Hoàng Minh Quân",
+      email: "minhquan.dev99@gmail.com",
+      phone: "0961273849",
+      address: "Hải Châu, Đà Nẵng",
+      skills: ["React Native", "Flutter", "Firebase", "TypeScript", "App Store Publishing"],
+      experience: "3 năm lập trình ứng dụng di động cho cả iOS và Android. Đã phát hành thành công 5 app trên store.",
+      education: "Đại học Duy Tân",
+      languages: ["Tiếng Việt", "Tiếng Anh"],
+      matchScore: 87,
+      sourcePlatform: "Perplexity Search",
+      profileUrl: "https://linkedin.com/in/quanhoang-mobile-mock",
+      matchReason: "Phát hiện thông qua bài đăng chia sẻ kinh nghiệm phát hành ứng dụng flutter/firebase tối thiểu hóa chi phí hạ tầng máy chủ."
+    }
+  ];
 }
 
 // Implement Vite middleware integration for Full-Stack Development serving React

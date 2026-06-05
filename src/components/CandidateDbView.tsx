@@ -23,7 +23,9 @@ import {
   AlertCircle,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  Globe,
+  Compass
 } from 'lucide-react';
 import { Candidate, Application, Job } from '../types';
 
@@ -34,6 +36,7 @@ interface CandidateDbProps {
   onUpdateCandidate: (candId: string, updates: Partial<Candidate>) => Promise<void>;
   onDeleteCandidate: (candId: string) => Promise<void>;
   onUpdateApplicationStatus: (candId: string, jobId: string, newStatus: string) => Promise<void>;
+  onAddCandidate?: (cand: Partial<Candidate>) => Promise<void>;
 }
 
 export default function CandidateDbView({ 
@@ -42,7 +45,8 @@ export default function CandidateDbView({
   jobs,
   onUpdateCandidate, 
   onDeleteCandidate,
-  onUpdateApplicationStatus
+  onUpdateApplicationStatus,
+  onAddCandidate
 }: CandidateDbProps) {
   
   // Search parameters
@@ -53,6 +57,78 @@ export default function CandidateDbView({
   // Selected candidate state for Detail Inspector modal
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [newTag, setNewTag] = useState('');
+
+  // Tab states: 'database' (ATS Database) vs 'perplexity' (Perplexity Search Sourcing)
+  const [activeTab, setActiveTab] = useState<'database' | 'perplexity'>('database');
+
+  // Perplexity AI Talent Search Web States
+  const [perplexityQuery, setPerplexityQuery] = useState('');
+  const [isPerplexitySearching, setIsPerplexitySearching] = useState(false);
+  const [perplexityResults, setPerplexityResults] = useState<any[]>([]);
+  const [perplexityError, setPerplexityError] = useState<string | null>(null);
+  const [savedPerplexityIds, setSavedPerplexityIds] = useState<Record<number, boolean>>({});
+
+  const handlePerplexitySearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!perplexityQuery.trim()) return;
+
+    setIsPerplexitySearching(true);
+    setPerplexityError(null);
+    setSavedPerplexityIds({});
+    
+    try {
+      const response = await fetch('/api/perplexity-search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: perplexityQuery }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Không thể kết nối đến máy chủ Perplexity AI');
+      }
+
+      const data = await response.json();
+      setPerplexityResults(data);
+    } catch (err: any) {
+      setPerplexityError(err.message || 'Lỗi truy vấn dữ liệu từ Perplexity AI.');
+    } finally {
+      setIsPerplexitySearching(false);
+    }
+  };
+
+  const handleSyncToAts = async (idx: number, record: any) => {
+    if (!onAddCandidate) return;
+    try {
+      const candidatePayload = {
+        name: record.name,
+        email: record.email,
+        phone: record.phone,
+        address: record.address,
+        skills: record.skills,
+        experience: record.experience,
+        education: record.education,
+        languages: record.languages,
+        matchScore: record.matchScore,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60",
+        source: record.sourcePlatform || 'Perplexity Search',
+        profileUrl: record.profileUrl,
+        matchReason: record.matchReason,
+        status: 'Sourced' as 'Sourced',
+        tags: [...(record.skills?.slice(0, 2) || []), 'PerplexityAI']
+      };
+
+      await onAddCandidate(candidatePayload);
+      
+      setSavedPerplexityIds(prev => ({
+        ...prev,
+        [idx]: true
+      }));
+    } catch (err) {
+      console.error('Error syncing candidate:', err);
+    }
+  };
 
   // Copy states
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -146,55 +222,285 @@ export default function CandidateDbView({
           <p className="text-xs text-slate-400">Xem lý lịch trích ngang, điểm matching, gắn nhãn phân đoạn ứng viên.</p>
         </div>
 
-        {/* Global searching controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Tìm theo tên, kỹ năng, nhãn..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl focus:outline-none w-64 shadow-xs"
-            />
-          </div>
-
+        {/* Sub-tab selection for Local Database vs Perplexity AI Search */}
+        <div className="flex bg-slate-200/60 p-1 rounded-xl w-fit border border-slate-200">
           <button
             type="button"
-            onClick={() => setFilterFavorite(!filterFavorite)}
-            className={`px-4 py-2.5 border rounded-xl text-xs font-semibold flex items-center space-x-2 transition ${
-              filterFavorite ? 'border-amber-500 bg-amber-50/50 text-amber-600' : 'border-slate-200 bg-white text-slate-600'
+            onClick={() => setActiveTab('database')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+              activeTab === 'database' 
+                ? 'bg-white text-slate-800 shadow-xs' 
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Star className={`w-4 h-4 ${filterFavorite ? 'fill-amber-500 text-amber-500' : 'text-slate-400'}`} />
-            <span>Starred Favorites</span>
+            <Users className="w-3.5 h-3.5" />
+            <span>Danh sách Hồ sơ nội bộ (ATS)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('perplexity')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+              activeTab === 'perplexity' 
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-650 text-white shadow-xs' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Sourcing Toàn cầu (Perplexity AI)</span>
           </button>
         </div>
       </div>
 
-      {/* Tags chips filter row */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
-          <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Lọc nhanh nhãn:</span>
-          <button
-            type="button"
-            onClick={() => setSelectedTag(null)}
-            className={`px-3 py-1 rounded-full transition ${!selectedTag ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 hover:bg-slate-50'}`}
-          >
-            Tất cả
-          </button>
-          {allTags.map((t, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => setSelectedTag(t)}
-              className={`px-3 py-1 rounded-full transition ${selectedTag === t ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 hover:bg-slate-50'}`}
-            >
-              #{t}
-            </button>
-          ))}
+      {activeTab === 'perplexity' ? (
+        <div className="space-y-6 animate-fade-in">
+          {/* Sourcing form and instructions */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 sm:p-8 rounded-2xl text-white shadow-xl relative overflow-hidden border border-slate-800">
+            {/* Background elements */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 rounded-full filter blur-3xl pointer-events-none -mr-16 -mt-16" />
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-600/10 rounded-full filter blur-3xl pointer-events-none -ml-16 -mb-16" />
+
+            <div className="relative z-10 max-w-2xl space-y-4">
+              <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-full text-xs text-indigo-300 font-bold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Deep Search Talent Engine</span>
+              </div>
+              <h4 className="text-xl sm:text-2xl font-bold tracking-tight">Tìm kiếm nhân tài Toàn cầu với Perplexity AI</h4>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                Nhập kịch bản hoặc yêu cầu tuyển chọn của bạn dưới đây. AI sẽ tự động kích hoạt bot Perplexity quét các profile cộng đồng, diễn đàn LinkedIn, GitHub, Facebook để tìm thấy ứng cử viên lý tưởng nhất trong vòng vài giây.
+              </p>
+
+              <form onSubmit={handlePerplexitySearch} className="pt-2">
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="text" 
+                      placeholder="VD: Tìm 3 chuyên gia React Native có chứng chỉ AWS tại Hồ Chí Minh..." 
+                      value={perplexityQuery}
+                      onChange={(e) => setPerplexityQuery(e.target.value)}
+                      className="w-full bg-slate-800/85 border border-slate-700/80 focus:border-indigo-500/80 rounded-xl py-3 pl-11 pr-4 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-500 transition duration-150"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isPerplexitySearching}
+                    className="bg-indigo-600 hover:bg-indigo-550 disabled:bg-indigo-850 text-white font-bold text-xs py-3 px-6 rounded-xl transition-all duration-150 flex items-center justify-center space-x-2 cursor-pointer shadow-md shadow-indigo-600/30"
+                  >
+                    {isPerplexitySearching ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span>Perplexity đang quét...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Tìm kiếm Web Sourcing</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Sourcing Results Section */}
+          {perplexityError && (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-600 flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{perplexityError}</span>
+            </div>
+          )}
+
+          {isPerplexitySearching && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-sm animate-pulse">
+              <div className="flex justify-center">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-650 animate-bounce">
+                  <Sparkles className="w-6 h-6 animate-spin text-indigo-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-850">Đang quét mạng Internet và cộng đồng nguồn nhân lực...</p>
+                <p className="text-xs text-slate-400 mt-1">Sử dụng sức mạnh của Perplexity AI kết hợp với mô hình suy luận thực tế.</p>
+              </div>
+            </div>
+          )}
+
+          {!isPerplexitySearching && perplexityResults.length > 0 && (
+            <div className="space-y-4 animate-fade-in">
+              <h4 className="text-xs font-bold text-slate-400 tracking-wider uppercase">Kết quả tìm kiếm từ Perplexity AI ({perplexityResults.length})</h4>
+              
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {perplexityResults.map((record, idx) => {
+                  const isSaved = savedPerplexityIds[idx];
+                  return (
+                    <div key={idx} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-all duration-200">
+                      
+                      {/* Top part / Card Header */}
+                      <div className="p-5 space-y-3.5">
+                        <div className="flex items-center justify-between">
+                          <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Compass className="w-3 h-3" />
+                            {record.sourcePlatform || 'Perplexity Search'}
+                          </span>
+                          
+                          <div className="flex items-center space-x-1 bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-1 rounded-full border border-emerald-100">
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            <span>{record.matchScore}% Match</span>
+                          </div>
+                      </div>
+
+                        <div>
+                          <h5 className="font-bold text-slate-800 hover:text-indigo-600 transition text-sm">{record.name}</h5>
+                          <p className="text-slate-400 text-[11px] font-semibold mt-0.5">{record.address}</p>
+                        </div>
+
+                        {/* Description / Experience */}
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-slate-600 text-xs leading-relaxed line-clamp-3">
+                            <span className="font-bold text-slate-800">Kinh nghiệm:</span> {record.experience}
+                          </p>
+                          <p className="text-slate-500 text-xs line-clamp-1">
+                            <span className="font-bold text-slate-800">Học vấn:</span> {record.education}
+                          </p>
+                        </div>
+
+                        {/* Skills Chips */}
+                        <div className="flex flex-wrap gap-1.5 pt-1.5">
+                          {record.skills?.map((skill: string, sIdx: number) => (
+                            <span key={sIdx} className="bg-slate-50 border border-slate-200 text-slate-500 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* AI Recommendation Reason */}
+                        <div className="bg-violet-50/50 border border-violet-100 p-3.5 rounded-xl space-y-1">
+                          <div className="flex items-center gap-1.5 text-[10px] text-violet-700 font-bold tracking-tight">
+                            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                            <span>ĐỀ CỬ CỦA PERPLEXITY AI:</span>
+                          </div>
+                          <p className="text-slate-600 text-[11px] leading-relaxed italic font-medium">
+                            "{record.matchReason}"
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="bg-slate-50 px-5 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                        {record.profileUrl ? (
+                          <a 
+                            href={getResolvedProfileUrl(record.name, record.profileUrl)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center space-x-1"
+                          >
+                            <span>Xem Profile</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-xs font-semibold">N/A profile URL</span>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={isSaved}
+                          onClick={() => handleSyncToAts(idx, record)}
+                          className={`text-xs font-bold py-2 px-3.5 rounded-xl transition flex items-center space-x-1 cursor-pointer ${
+                            isSaved 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                              : 'bg-indigo-600 hover:bg-indigo-550 text-white shadow-xs'
+                          }`}
+                        >
+                          {isSaved ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Đã đồng bộ ATS</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Lưu vào ATS</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {!isPerplexitySearching && perplexityResults.length === 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto space-y-3.5 shadow-xs">
+              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 mx-auto">
+                <Globe className="w-5 h-5 text-slate-500 animate-pulse" />
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-800 text-sm">Chưa có kết quả tìm kiếm</h5>
+                <p className="text-slate-400 text-xs mt-1">Sử dụng ô tìm kiếm ở trên để bắt đầu truy quét các profile nhân sự mơ ước trực tiếp từ Web thông qua Perplexity AI.</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      ) : (
+        <>
+          {/* Header controls and filters */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 -mt-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div>
+              <p className="text-slate-500 text-xs font-bold">Tìm kiếm & Lọc nhanh bộ nhớ đệm ATS:</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Tìm theo tên, kỹ năng, nhãn..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-205 text-xs font-semibold text-slate-700 rounded-xl focus:outline-none w-64 shadow-inner"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFilterFavorite(!filterFavorite)}
+                className={`px-4 py-2.5 border rounded-xl text-xs font-semibold flex items-center space-x-2 transition cursor-pointer ${
+                  filterFavorite ? 'border-amber-500 bg-amber-50/50 text-amber-600' : 'border-slate-200 bg-white text-slate-600'
+                }`}
+              >
+                <Star className={`w-4 h-4 ${filterFavorite ? 'fill-amber-500 text-amber-500' : 'text-slate-400'}`} />
+                <span>Starred Favorites</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tags chips filter row */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
+              <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Lọc nhanh nhãn:</span>
+              <button
+                type="button"
+                onClick={() => setSelectedTag(null)}
+                className={`px-3 py-1 rounded-full transition cursor-pointer ${!selectedTag ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 hover:bg-slate-50'}`}
+              >
+                Tất cả
+              </button>
+              {allTags.map((t, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedTag(t)}
+                  className={`px-3 py-1 rounded-full transition cursor-pointer ${selectedTag === t ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 hover:bg-slate-50'}`}
+                >
+                  #{t}
+                </button>
+              ))}
+            </div>
+          )}
 
       {/* Main Database Table Card */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
@@ -348,6 +654,7 @@ export default function CandidateDbView({
           </table>
         </div>
       </div>
+      </>)}
 
       {/* IMMERSIVE CO-PILOT PROFILE ANALYTICS MODAL */}
       {selectedCandidate && (
@@ -355,7 +662,7 @@ export default function CandidateDbView({
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-3">
                 <img 
                   src={`https://api.dicebear.com/7.x/initials/svg?seed=${selectedCandidate.name}`} 
@@ -380,7 +687,7 @@ export default function CandidateDbView({
             </div>
 
             {/* Modal Scroll Body Panel */}
-            <div className="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-xs font-semibold">
+            <div className="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-xs font-semibold">
               
               {/* Left Column: Traditional CV Extract */}
               <div className="space-y-6">
