@@ -1,0 +1,189 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Information about a recruiter, hiring manager, or administrator",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Unique user identifier in Firebase Auth" },
+        "email": { "type": "string", "description": "Email address of the user" },
+        "displayName": { "type": "string", "description": "Full name" },
+        "role": { "type": "string", "enum": ["Super Admin", "Admin", "Recruiter", "HR Staff"], "description": "System privilege role" },
+        "photoURL": { "type": "string", "description": "Profile picture URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Time of account creation" }
+      },
+      "required": ["userId", "email", "role"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Job description generated manually or through the AI JD Agent",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string", "description": "Unique identifier of the job" },
+        "title": { "type": "string", "description": "Refined and optimized Job Title" },
+        "industry": { "type": "string", "description": "Business segment / line of work" },
+        "location": { "type": "string", "description": "Geographical location" },
+        "salaryRange": { "type": "string", "description": "Salary bounds, e.g., '$1500 - $2500'" },
+        "experience": { "type": "string", "description": "Required years/level of professional maturity" },
+        "skills": { "type": "string", "description": "Comma-separated raw keywords or skills list" },
+        "workingMode": { "type": "string", "enum": ["Onsite", "Remote", "Hybrid"], "description": "Physical work model" },
+        "hiresCount": { "type": "integer", "description": "Target headcount" },
+        "jdText": { "type": "string", "description": "Generated professional job description in Markdown" },
+        "socialJD": { "type": "object", "description": "Optimized output text per recruiting platform/social channel" },
+        "channels": { "type": "array", "description": "List of selected channels for posting, e.g. Facebook, LinkedIn, Zalo" },
+        "postingStatus": { "type": "string", "enum": ["Draft", "Pending", "Success", "Failed"], "description": "Job delivery state" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of job creation" },
+        "createdBy": { "type": "string", "description": "UID of the recruiter" }
+      },
+      "required": ["jobId", "title", "workingMode", "postingStatus", "createdBy"]
+    },
+    "Candidate": {
+      "title": "Candidate",
+      "description": "Pre-filled, uploaded, or parsed resumes representing applicants",
+      "type": "object",
+      "properties": {
+        "candidateId": { "type": "string", "description": "Candidate identifier" },
+        "name": { "type": "string", "description": "Candidate full name" },
+        "email": { "type": "string", "description": "Candidate electronic mail address" },
+        "phone": { "type": "string", "description": "Candidate contact number" },
+        "address": { "type": "string", "description": "Geographical location or home address" },
+        "skills": { "type": "array", "description": "List of skills parsed or matched" },
+        "experience": { "type": "string", "description": "Candidate professional trace summary" },
+        "education": { "type": "string", "description": "Highest education degrees or certificates" },
+        "languages": { "type": "array", "description": "Spoken languages" },
+        "isFavorite": { "type": "boolean", "description": "Starred or favorited key candidate" },
+        "tags": { "type": "array", "description": "Labels assigned by recruiters" },
+        "cvUrl": { "type": "string", "description": "Storage or mock URI of the CV file" },
+        "cvName": { "type": "string", "description": "Original file name uploaded, e.g. Resume.pdf" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp in our DB" }
+      },
+      "required": ["candidateId", "name", "email"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Job application representing candidate ranking, AI scoring, and stages",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string", "description": "Unique matching key" },
+        "jobId": { "type": "string", "description": "Referenced job model ID" },
+        "jobTitle": { "type": "string", "description": "Denormalized job title for quick layout" },
+        "candidateId": { "type": "string", "description": "Referenced candidate model ID" },
+        "candidateName": { "type": "string", "description": "Denormalized candidate name" },
+        "status": { "type": "string", "enum": ["Applied", "Sourced", "Interviewing", "Offered", "Hired", "Rejected"], "description": "Salesforce-style ATS status" },
+        "matchingScore": { "type": "integer", "description": "Computed AI score from 0 to 100" },
+        "skillsMatch": { "type": "integer", "description": "AI skills rating" },
+        "experienceMatch": { "type": "integer", "description": "AI profile maturity rating" },
+        "salaryMatch": { "type": "integer", "description": "AI salary bounds rating" },
+        "locationMatch": { "type": "integer", "description": "AI location accessibility rating" },
+        "summary": { "type": "string", "description": "AI-generated executive summary" },
+        "strengths": { "type": "array", "description": "Identified top 3 high points" },
+        "weaknesses": { "type": "array", "description": "Identified flags or gaps" },
+        "missingSkills": { "type": "array", "description": "Important skills found missing from candidate compared to ID requirements" },
+        "interviewQuestions": { "type": "array", "description": "AI structured target questions" },
+        "recommendation": { "type": "string", "enum": ["Excellent", "Good", "Average", "Poor"], "description": "AI hiring suitability" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last operation audit timestamp" }
+      },
+      "required": ["applicationId", "jobId", "candidateId", "status", "matchingScore"]
+    },
+    "Interview": {
+      "title": "Interview",
+      "description": "Scheduled recruitment call or chat syncs",
+      "type": "object",
+      "properties": {
+        "interviewId": { "type": "string", "description": "Unique key" },
+        "jobId": { "type": "string", "description": "Referenced job ID" },
+        "candidateId": { "type": "string", "description": "Referenced candidate ID" },
+        "candidateName": { "type": "string", "description": "Denormalized candidate name" },
+        "recruiterId": { "type": "string", "description": "Interviewer user identifier" },
+        "date": { "type": "string", "description": "Date of scheduled meeting" },
+        "time": { "type": "string", "description": "Time of scheduled meeting" },
+        "platform": { "type": "string", "enum": ["Google Meet", "Microsoft Teams", "Zoom", "Office Onsite"], "description": "Platform host link or type" },
+        "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled"], "description": "Status of the event" },
+        "invitationEmail": { "type": "string", "description": "Generated invitations rich email draft" },
+        "reminderEmail": { "type": "string", "description": "Automatic notification notice template" },
+        "calendarSync": { "type": "boolean", "description": "Calendar integration confirmation" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Database insertion date" }
+      },
+      "required": ["interviewId", "jobId", "candidateId", "status", "date"]
+    },
+    "Email": {
+      "title": "Email",
+      "description": "SMTP message logging and editable automated template triggers",
+      "type": "object",
+      "properties": {
+        "emailId": { "type": "string", "description": "System log id" },
+        "candidateId": { "type": "string", "description": "Recipient candidate trace" },
+        "candidateEmail": { "type": "string", "description": "Target address" },
+        "subject": { "type": "string", "description": "Subject of current message" },
+        "body": { "type": "string", "description": "Constructed message body in text or HTML markup" },
+        "type": { "type": "string", "enum": ["Invitation", "Rejection", "Offer", "Follow-up"], "description": "Mail intent group" },
+        "sentAt": { "type": "string", "format": "date-time", "description": "Timestamp indicating release" },
+        "status": { "type": "string", "enum": ["Draft", "Pending", "Sent", "Failed"], "description": "Physical sending feedback" }
+      },
+      "required": ["emailId", "candidateEmail", "subject", "body", "status"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Generated Excel, PDF and executive dashboards exports",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string", "description": "Identifier key" },
+        "title": { "type": "string", "description": "Generated file designation, e.g., 'Báo cáo Tuyển dụng Tháng 6'" },
+        "type": { "type": "string", "enum": ["Recruitment Report PDF", "Recruitment Report Excel", "Candidate Report", "Hiring Report"], "description": "Structured type" },
+        "summary": { "type": "string", "description": "Summary notes compiled by Gemini" },
+        "stats": { "type": "object", "description": "Compiled metrics and numeric tallies" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation stamp" }
+      },
+      "required": ["reportId", "title", "type"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Recruiting agency settings: SMTP setups, API configurations",
+      "type": "object",
+      "properties": {
+        "settingsId": { "type": "string", "description": "Document ID matching recruiter settings target" },
+        "smtpHost": { "type": "string", "description": "Outgoing server host coordinate" },
+        "smtpPort": { "type": "string", "description": "SMTP communication port coordinate" },
+        "smtpUser": { "type": "string", "description": "Auth logins email" },
+        "googleLoginEnabled": { "type": "boolean", "description": "Google platform integration" },
+        "autoSourcing": { "type": "boolean", "description": "Is autonomous resume parsing and matching toggled on" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Setting sync point" }
+      },
+      "required": ["settingsId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Authenticated corporate staff"
+    },
+    "jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Created job description models"
+    },
+    "candidates/{candidateId}": {
+      "schema": "Candidate",
+      "description": "ATS Talent profile registries"
+    },
+    "applications/{applicationId}": {
+      "schema": "Application",
+      "description": "AI candidate-to-job matching pipelines"
+    },
+    "interviews/{interviewId}": {
+      "schema": "Interview",
+      "description": "Hiring calendar events"
+    },
+    "emails/{emailId}": {
+      "schema": "Email",
+      "description": "Communications archive"
+    },
+    "reports/{reportId}": {
+      "schema": "Report",
+      "description": "Export reports archive"
+    },
+    "settings/{settingsId}": {
+      "schema": "Settings",
+      "description": "Global integration adjustments"
+    }
+  }
+}

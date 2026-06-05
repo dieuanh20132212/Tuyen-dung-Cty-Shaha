@@ -1,0 +1,6 @@
+{
+  "name": "Hệ Thống Tuyển dụng Cty Shaha",
+  "description": "Nền tảng tuyển dụng thông minh tích hợp trí tuệ nhân tạo Gemini dành cho Công ty Shaha.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

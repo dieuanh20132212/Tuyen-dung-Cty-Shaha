@@ -1,0 +1,197 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Phase 3: Global Security Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true);
+    }
+
+    // Standard string helper validation
+    function isValidString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    // Validate generic Document ID structures
+    function isValidId(id) {
+      return id is string && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Check if user document references a valid profile
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Fetch user profile properties safely
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Determine current system member access roles
+    function isRecruiterOrAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          getUserData().role == 'Super Admin' || 
+          getUserData().role == 'Admin' || 
+          getUserData().role == 'Recruiter' || 
+          getUserData().role == 'HR Staff'
+        )
+      );
+    }
+
+    // --- Phase 4: Validation Blueprints & Guards ---
+
+    // 1. User profile schema validation
+    function isValidUser(user) {
+      return user.keys().hasAll(['userId', 'email', 'role']) 
+        && user.keys().size() <= 6 
+        && user.userId == request.auth.uid 
+        && isValidString(user.email, 128)
+        && user.role in ['Super Admin', 'Admin', 'Recruiter', 'HR Staff']
+        && (!('displayName' in user) || isValidString(user.displayName, 128));
+    }
+
+    // 2. Job validation
+    function isValidJob(job) {
+      return job.keys().hasAll(['jobId', 'title', 'workingMode', 'postingStatus', 'createdBy'])
+        && job.keys().size() <= 15
+        && isValidString(job.jobId, 64)
+        && isValidString(job.title, 128)
+        && job.workingMode in ['Onsite', 'Remote', 'Hybrid']
+        && job.postingStatus in ['Draft', 'Pending', 'Success', 'Failed']
+        && job.createdBy == request.auth.uid;
+    }
+
+    // 3. Candidate validation
+    function isValidCandidate(candidate) {
+      return candidate.keys().hasAll(['candidateId', 'name', 'email'])
+        && candidate.keys().size() <= 14
+        && isValidString(candidate.candidateId, 64)
+        && isValidString(candidate.name, 128)
+        && isValidString(candidate.email, 128);
+    }
+
+    // 4. Application validation
+    function isValidApplication(app) {
+      return app.keys().hasAll(['applicationId', 'jobId', 'candidateId', 'status', 'matchingScore'])
+        && app.keys().size() <= 18
+        && isValidString(app.applicationId, 64)
+        && isValidString(app.jobId, 64)
+        && isValidString(app.candidateId, 64)
+        && app.status in ['Applied', 'Sourced', 'Interviewing', 'Offered', 'Hired', 'Rejected']
+        && app.matchingScore is int && app.matchingScore >= 0 && app.matchingScore <= 100;
+    }
+
+    // 5. Interview validation
+    function isValidInterview(interview) {
+      return interview.keys().hasAll(['interviewId', 'jobId', 'candidateId', 'status', 'date'])
+        && interview.keys().size() <= 12
+        && isValidString(interview.interviewId, 64)
+        && isValidString(interview.jobId, 64)
+        && isValidString(interview.candidateId, 64)
+        && interview.status in ['Scheduled', 'Completed', 'Cancelled']
+        && isValidString(interview.date, 64);
+    }
+
+    // 6. Email validation
+    function isValidEmail(email) {
+      return email.keys().hasAll(['emailId', 'candidateEmail', 'subject', 'body', 'status'])
+        && email.keys().size() <= 8
+        && isValidString(email.emailId, 64)
+        && isValidString(email.candidateEmail, 128)
+        && isValidString(email.subject, 256)
+        && isValidString(email.body, 10000)
+        && email.status in ['Draft', 'Pending', 'Sent', 'Failed'];
+    }
+
+    // 7. Report validation
+    function isValidReport(report) {
+      return report.keys().hasAll(['reportId', 'title', 'type'])
+        && report.keys().size() <= 6
+        && isValidString(report.reportId, 64)
+        && isValidString(report.title, 256)
+        && report.type in ['Recruitment Report PDF', 'Recruitment Report Excel', 'Candidate Report', 'Hiring Report'];
+    }
+
+    // 8. Settings validation
+    function isValidSettings(settings) {
+      return settings.keys().hasAll(['settingsId'])
+        && settings.keys().size() <= 7
+        && isValidString(settings.settingsId, 64);
+    }
+
+    // --- Phase 4.2 Matches and Authorization Gates ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isRecruiterOrAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidUser(request.resource.data) 
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL']));
+      allow delete: if isRecruiterOrAdmin() && isValidId(userId);
+    }
+
+    match /jobs/{jobId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(jobId);
+      allow create: if isRecruiterOrAdmin() && isValidId(jobId) && isValidJob(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(jobId) && isValidJob(request.resource.data)
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasAny(['title', 'industry', 'location', 'salaryRange', 'experience', 'skills', 'workingMode', 'hiresCount', 'jdText', 'socialJD', 'channels', 'postingStatus']));
+      allow delete: if isRecruiterOrAdmin() && isValidId(jobId);
+    }
+
+    match /candidates/{candidateId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(candidateId);
+      allow create: if isRecruiterOrAdmin() && isValidId(candidateId) && isValidCandidate(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(candidateId) && isValidCandidate(request.resource.data)
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasAny(['name', 'email', 'phone', 'address', 'skills', 'experience', 'education', 'languages', 'isFavorite', 'tags', 'cvUrl', 'cvName']));
+      allow delete: if isRecruiterOrAdmin() && isValidId(candidateId);
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(applicationId);
+      allow create: if isRecruiterOrAdmin() && isValidId(applicationId) && isValidApplication(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(applicationId) && isValidApplication(request.resource.data)
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'matchingScore', 'skillsMatch', 'experienceMatch', 'salaryMatch', 'locationMatch', 'summary', 'strengths', 'weaknesses', 'missingSkills', 'interviewQuestions', 'recommendation', 'updatedAt']));
+      allow delete: if isRecruiterOrAdmin() && isValidId(applicationId);
+    }
+
+    match /interviews/{interviewId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(interviewId);
+      allow create: if isRecruiterOrAdmin() && isValidId(interviewId) && isValidInterview(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(interviewId) && isValidInterview(request.resource.data)
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'date', 'time', 'platform', 'invitationEmail', 'reminderEmail', 'calendarSync']));
+      allow delete: if isRecruiterOrAdmin() && isValidId(interviewId);
+    }
+
+    match /emails/{emailId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(emailId);
+      allow create: if isRecruiterOrAdmin() && isValidId(emailId) && isValidEmail(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(emailId) && isValidEmail(request.resource.data)
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sentAt']));
+      allow delete: if isRecruiterOrAdmin() && isValidId(emailId);
+    }
+
+    match /reports/{reportId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(reportId);
+      allow create: if isRecruiterOrAdmin() && isValidId(reportId) && isValidReport(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(reportId) && isValidReport(request.resource.data);
+      allow delete: if isRecruiterOrAdmin() && isValidId(reportId);
+    }
+
+    match /settings/{settingsId} {
+      allow read: if isRecruiterOrAdmin() && isValidId(settingsId);
+      allow create: if isRecruiterOrAdmin() && isValidId(settingsId) && isValidSettings(request.resource.data);
+      allow update: if isRecruiterOrAdmin() && isValidId(settingsId) && isValidSettings(request.resource.data);
+      allow delete: if isRecruiterOrAdmin() && isValidId(settingsId);
+    }
+  }
+}
