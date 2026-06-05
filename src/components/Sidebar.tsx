@@ -25,9 +25,10 @@ interface SidebarProps {
   setCurrentTab: (tab: string) => void;
   user: any;
   onLogout: () => void;
+  onCloseMobile?: () => void;
 }
 
-export default function Sidebar({ currentTab, setCurrentTab, user, onLogout }: SidebarProps) {
+export default function Sidebar({ currentTab, setCurrentTab, user, onLogout, onCloseMobile }: SidebarProps) {
   const menuItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
     { id: 'jobs', name: 'Tin tuyển dụng (Jobs)', icon: Briefcase },
@@ -41,18 +42,30 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout }: S
   ];
 
   return (
-    <aside id="app-sidebar" className="w-80 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800">
+    <aside id="app-sidebar" className="w-72 sm:w-80 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800">
       {/* Brand Header */}
-      <div className="p-6 border-b border-slate-800 flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-          <Sparkles className="w-6 h-6 text-white text-indigo-100" />
+      <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 shrink-0">
+            <Sparkles className="w-6 h-6 text-white text-indigo-100" />
+          </div>
+          <div>
+            <h1 className="text-base sm:text-lg font-black tracking-wider text-white flex items-center">
+              SHAHA <span className="text-indigo-400 font-mono ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-800 tracking-normal font-sans uppercase">RECRUIT</span>
+            </h1>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold mt-0.5">Hệ thống Tuyển dụng Shaha</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-black tracking-wider text-white flex items-center">
-            SHAHA <span className="text-indigo-400 font-mono ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-800 tracking-normal font-sans uppercase">RECRUIT</span>
-          </h1>
-          <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Hệ thống Tuyển dụng Cty Shaha</p>
-        </div>
+        {onCloseMobile && (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer"
+            title="Đóng bảng chọn"
+          >
+            <ChevronRight className="w-5 h-5 rotate-180" />
+          </button>
+        )}
       </div>
 
       {/* User Information Profile */}
@@ -77,7 +90,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout }: S
             type="button"
             onClick={onLogout}
             title="Đăng xuất"
-            className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-rose-400 transition"
+            className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-rose-400 transition cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -94,7 +107,10 @@ export default function Sidebar({ currentTab, setCurrentTab, user, onLogout }: S
               key={item.id}
               id={`sidebar-link-${item.id}`}
               type="button"
-              onClick={() => setCurrentTab(item.id)}
+              onClick={() => {
+                setCurrentTab(item.id);
+                if (onCloseMobile) onCloseMobile();
+              }}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition duration-150 ${
                 isActive 
                   ? 'bg-indigo-600/90 text-white shadow-md shadow-indigo-600/10' 

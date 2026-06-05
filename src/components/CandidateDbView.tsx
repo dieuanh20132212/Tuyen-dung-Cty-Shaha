@@ -137,7 +137,7 @@ export default function CandidateDbView({
   const currentJob = currentApp ? jobs.find(j => j.jobId === currentApp.jobId) : undefined;
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       
       {/* Header controls and filters */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

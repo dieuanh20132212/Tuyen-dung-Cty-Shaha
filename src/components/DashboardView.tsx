@@ -104,7 +104,7 @@ export default function DashboardView({ jobs, candidates, applications, intervie
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in p-8 bg-slate-50 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         

@@ -12,7 +12,8 @@ import {
   Sparkles,
   RefreshCw,
   LogIn,
-  Check
+  Check,
+  Menu
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -26,16 +27,17 @@ interface HeaderProps {
     read: boolean;
   }>;
   onClearNotifications: () => void;
+  onToggleSidebar?: () => void;
 }
 
-export default function Header({ currentTab, user, onLogin, notifications, onClearNotifications }: HeaderProps) {
+export default function Header({ currentTab, user, onLogin, notifications, onClearNotifications, onToggleSidebar }: HeaderProps) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
   const getTabTitle = (tab: string) => {
     switch (tab) {
       case 'dashboard': return 'Bảng điều khiển (Dashboard)';
       case 'jobs': return 'Tuyển dụng & Trợ lý JDs';
-      case 'candidates': return 'Ứng viên & Radar Sourcing';
+      case 'candidates': return 'Ứng viên & Sourcing';
       case 'interviews': return 'Kế hoạch Phỏng vấn';
       case 'emails': return 'Hòm thư Tự động hóa';
       case 'automation': return 'Quy trình AI Automation';
@@ -49,14 +51,14 @@ export default function Header({ currentTab, user, onLogin, notifications, onCle
   const getTabSubtitle = (tab: string) => {
     switch (tab) {
       case 'dashboard': return 'Phân tích tổng quan số liệu, tỷ lệ chuyển đổi hình thái tuyển dụng.';
-      case 'jobs': return 'Quản lý tin tuyển dụng, tự động tối ưu hóa đa kênh tin đăng bằng Gemini.';
-      case 'candidates': return 'Tìm kiếm tự động, phân tích chuyên sâu điểm mạnh điểm yếu ứng viên thông qua CV.';
-      case 'interviews': return 'Quản lý lịch hẹn, đồng bộ hóa lịch làm việc tuyển dụng tự động.';
-      case 'emails': return 'Tự động gửi thông tin báo đỗ/trượt, lập trình kịch bản gửi email tự động.';
-      case 'automation': return 'Thực thi pipeline AI tuyển dụng từ đầu đến đuôi tự động không cần can thiệp.';
+      case 'jobs': return 'Quản lý tin tuyển dụng, tự động tối ưu hóa bằng Gemini.';
+      case 'candidates': return 'Tìm kiếm tự động, phân tích chuyên sâu điểm mạnh ứng viên qua CV.';
+      case 'interviews': return 'Quản lý lịch hẹn, đồng bộ trực tuyến tự động.';
+      case 'emails': return 'Tự động gửi thông tin báo đỗ/trượt, lập trình chiến dịch email.';
+      case 'automation': return 'Thực thi pipeline AI tuyển dụng tự động từ đầu đến đuôi.';
       case 'reports': return 'Trích xuất báo cáo thống kê định dạng PDF/Excel sắc nét.';
-      case 'settings': return 'Đồng bộ kết nối cơ sở dữ liệu Firebase, cổng SMTP và luồng AI Agent.';
-      case 'admin': return 'Quản lý cơ cấu nhân sự, cấp vai trò nhiệm vụ tuyển dụng trong tổ chức.';
+      case 'settings': return 'Đồng bộ kết nối cơ sở dữ liệu Firebase và luồng AI Agent.';
+      case 'admin': return 'Quản lý cơ cấu nhân sự, phân vai trò nhiệm vụ tuyển dụng.';
       default: return 'Hệ quản trị tuyển dụng tối ưu hóa dựa trên sức mạnh của Google Gemini.';
     }
   };
@@ -64,25 +66,38 @@ export default function Header({ currentTab, user, onLogin, notifications, onCle
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header id="app-header" className="bg-white/95 backdrop-blur border-b border-slate-200/85 h-20 flex items-center justify-between px-8 sticky top-0 z-40">
-      {/* Title & Path */}
-      <div>
-        <div className="flex items-center space-x-2">
-          <h2 className="text-xl font-bold font-sans text-slate-800 tracking-tight">
-            {getTabTitle(currentTab)}
-          </h2>
-          <span className="text-slate-300">/</span>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-mono capitalize">
-            {currentTab}
-          </span>
+    <header id="app-header" className="bg-white/95 backdrop-blur border-b border-slate-200/85 h-20 flex items-center justify-between px-4 sm:px-6 md:px-8 sticky top-0 z-40">
+      {/* Title & Path with Hamburger */}
+      <div className="flex items-center space-x-3.5 min-w-0 flex-1 mr-2">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            id="mobile-sidebar-toggle-btn"
+            onClick={onToggleSidebar}
+            className="lg:hidden p-2 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            title="Mở bảng chọn"
+          >
+            <Menu className="w-5.5 h-5.5" />
+          </button>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-center space-x-2">
+            <h2 className="text-sm xs:text-base sm:text-lg md:text-xl font-bold font-sans text-slate-800 tracking-tight truncate">
+              {getTabTitle(currentTab)}
+            </h2>
+            <span className="text-slate-300 hidden md:inline">/</span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-mono capitalize hidden md:inline">
+              {currentTab}
+            </span>
+          </div>
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate max-w-[190px] xs:max-w-[240px] sm:max-w-sm md:max-w-none">{getTabSubtitle(currentTab)}</p>
         </div>
-        <p className="text-xs text-slate-500 mt-1">{getTabSubtitle(currentTab)}</p>
       </div>
 
       {/* Right Tools Controls */}
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-2.5 xs:space-x-4 md:space-x-6 shrink-0">
         {/* Connection status log */}
-        <div className="hidden lg:flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100 text-emerald-800 text-xs font-mono font-medium">
+        <div className="hidden xl:flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100 text-emerald-800 text-xs font-mono font-medium">
           <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
           <span>Firestore Realtime</span>
         </div>
@@ -93,7 +108,7 @@ export default function Header({ currentTab, user, onLogin, notifications, onCle
             type="button"
             id="notifications-bell-btn"
             onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-            className="p-2.5 rounded-full hover:bg-slate-100 text-slate-600 hover:text-indigo-600 transition relative"
+            className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-indigo-600 transition relative cursor-pointer"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
@@ -105,9 +120,9 @@ export default function Header({ currentTab, user, onLogin, notifications, onCle
 
           {/* Notifications Dropdown Window */}
           {showNotifDropdown && (
-            <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
+            <div className="absolute right-0 mt-3 w-72 xs:w-80 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                <span className="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-indigo-500" />
                   Hộp tin thông báo AI
                 </span>
@@ -118,9 +133,9 @@ export default function Header({ currentTab, user, onLogin, notifications, onCle
                       onClearNotifications();
                       setShowNotifDropdown(false);
                     }}
-                    className="text-xs text-indigo-600 hover:underline font-semibold"
+                    className="text-[11px] text-indigo-600 hover:underline font-semibold"
                   >
-                    Đánh dấu đã đọc
+                    Đọc hết
                   </button>
                 )}
               </div>
@@ -152,20 +167,20 @@ export default function Header({ currentTab, user, onLogin, notifications, onCle
             type="button"
             id="google-signin-btn"
             onClick={onLogin}
-            className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition shadow-md shadow-indigo-600/10 cursor-pointer"
+            className="flex items-center space-x-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-md shadow-indigo-600/10 cursor-pointer"
           >
-            <LogIn className="w-4 h-4" />
-            <span>Đăng nhập Google</span>
+            <LogIn className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline">Đăng nhập</span>
           </button>
         ) : (
-          <div className="flex items-center space-x-3.5 pl-4 border-l border-slate-200">
-            <div className="text-right">
-              <h4 className="text-sm font-bold text-slate-800">{user.displayName || "HR Admin"}</h4>
-              <p className="text-[11px] font-mono text-indigo-600 uppercase font-bold tracking-wider">{user.role || "Super Admin"}</p>
+          <div className="flex items-center space-x-2 md:space-x-3 pl-2.5 sm:pl-4 border-l border-slate-200">
+            <div className="text-right hidden sm:block">
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800">{user.displayName || "HR Admin"}</h4>
+              <p className="text-[10px] font-mono text-indigo-600 uppercase font-bold tracking-wider">{user.role || "Super Admin"}</p>
             </div>
             <img 
               src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email}`}
-              className="w-10 h-10 rounded-full border border-slate-300" 
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-slate-200" 
               alt="avatar"
               referrerPolicy="no-referrer"
             />

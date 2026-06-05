@@ -90,7 +90,7 @@ Trong kỳ đánh giá tuyển dụng Quý II vừa qua, hệ thống **Hệ Th�
   };
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen text-xs font-semibold text-slate-705">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen text-xs font-semibold text-slate-705">
       
       {/* Top Banner with Download reports buttons */}
       <div className="flex items-center justify-between">

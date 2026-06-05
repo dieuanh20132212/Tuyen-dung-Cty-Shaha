@@ -392,7 +392,7 @@ export default function JobAgentView({ jobs, onSaveJob, onDeleteJob }: JobAgentP
   };
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       {/* Search and Action Bar */}
       <div className="flex items-center justify-between">
         <div>
@@ -440,7 +440,7 @@ export default function JobAgentView({ jobs, onSaveJob, onDeleteJob }: JobAgentP
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-bold">Lĩnh vực (Industry)</label>
                   <input 
@@ -463,7 +463,7 @@ export default function JobAgentView({ jobs, onSaveJob, onDeleteJob }: JobAgentP
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-bold">Yêu cầu kinh nghiệm</label>
                   <input 
@@ -486,7 +486,7 @@ export default function JobAgentView({ jobs, onSaveJob, onDeleteJob }: JobAgentP
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-bold">Hình thức làm việc</label>
                   <select 
@@ -509,7 +509,7 @@ export default function JobAgentView({ jobs, onSaveJob, onDeleteJob }: JobAgentP
                     className="w-full text-xs font-medium p-3 rounded-lg border border-slate-200 bg-slate-50 focus:outline-none"
                   />
                 </div>
-                <div>
+                <div className="sm:col-span-2 md:col-span-1">
                   <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-bold">Tổng hợp kỹ năng cốt lõi</label>
                   <input 
                     type="text" 

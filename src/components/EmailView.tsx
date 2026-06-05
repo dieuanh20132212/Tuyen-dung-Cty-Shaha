@@ -114,7 +114,7 @@ export default function EmailView({ emails, candidates, jobs, onSendEmail, onDel
   };
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       
       {/* Navigation tabs row */}
       <div className="flex border-b border-slate-200">

@@ -454,7 +454,7 @@ export default function AutomationView({ notifications, jobs = [], onAddCandidat
   };
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen">
       
       {/* Tab Selectors */}
       <div className="flex items-center space-x-1 bg-slate-200/60 p-1.5 rounded-2xl w-fit border border-slate-200">

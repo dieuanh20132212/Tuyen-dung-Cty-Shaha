@@ -39,6 +39,7 @@ import AdminView from './components/AdminView';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('dashboard');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   // Firestore collections states
@@ -496,18 +497,31 @@ export default function App() {
   };
 
   return (
-    <div id="app-root-container" className="flex h-screen bg-slate-100 overflow-hidden text-slate-700 select-none">
+    <div id="app-root-container" className="flex h-screen bg-slate-100 overflow-hidden text-slate-700 select-none relative">
       
-      {/* Sidebar navigation */}
-      <Sidebar 
-        currentTab={currentTab} 
-        setCurrentTab={setCurrentTab} 
-        user={user} 
-        onLogout={handleLogout} 
-      />
+      {/* Sidebar navigation drawer/backdrop on mobile */}
+      {isMobileSidebarOpen && (
+        <div 
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-45 lg:hidden transition-opacity duration-300 pointer-events-auto"
+        />
+      )}
+      
+      {/* Sidebar Section */}
+      <div className={`fixed inset-y-0 left-0 z-50 lg:static lg:block transition-transform duration-300 ease-in-out ${
+        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        <Sidebar 
+          currentTab={currentTab} 
+          setCurrentTab={setCurrentTab} 
+          user={user} 
+          onLogout={handleLogout} 
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        />
+      </div>
 
       {/* Main Frame content wrap */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         
         {/* Header tools */}
         <Header 
@@ -516,6 +530,7 @@ export default function App() {
           onLogin={handleGoogleLogin} 
           notifications={notifications}
           onClearNotifications={handleClearNotifications}
+          onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />
 
         {/* Render Tab views seamlessly */}

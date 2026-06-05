@@ -35,7 +35,7 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen text-xs font-semibold text-slate-700">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in bg-slate-50 min-h-screen text-xs font-semibold text-slate-700">
       
       {/* Settings section containers */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
